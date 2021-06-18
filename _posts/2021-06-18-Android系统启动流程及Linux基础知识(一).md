@@ -280,7 +280,7 @@ bool Service::StartIfNotDisabled() {
 4、在Start()函数中，如果Service已经运行，则不再启动。如果没有，则使用fork()函数创建子进程，并返回pid值。当pid为0时，则说明当前代码逻辑在子进程中运行，最然后会调用execve()函数去启动子进程，并进入该Service的main函数中，如果该Service是Zygote，则会执行Zygote的main函数。（对应frameworks/base/cmds/app_process/app_main.cpp中的main()函数）
 5、最后，调用runtime的start函数启动Zygote。
 
-### 五、总结
+## 五、总结
 经过以上的分析，init进程的启动过程主要分为以下三部：
 
 * 1、创建和挂载启动所需的文件目录。
