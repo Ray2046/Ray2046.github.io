@@ -9,10 +9,10 @@ tags: Android
 本文主要用于个人学习的整理与记录，如有纰漏，望见谅。
 
 Android系统启动流程共分为四篇，分别为：
-*init进程启动
-*Zygote进程启动
-*SystemServer进程启动
-*Launcher进程启动
+* init进程启动
+* Zygote进程启动
+* SystemServer进程启动
+* Launcher进程启动
 
 先给出一幅Gityuan博客中的一幅系统启动架构图来对Android系统的启动流程有一个宏观的把控。
 ![cmd-markdown-logo](http://gityuan.com/images/android-arch/android-boot.jpg)
