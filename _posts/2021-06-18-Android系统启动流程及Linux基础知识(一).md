@@ -6,7 +6,8 @@ tags: Android
 ---
 
 
-本文主要用于个人学习的整理与记录，如有纰漏，望见谅。
+本文主要用于个人学习的整理与记录，如有纰漏，望指正。
+内容主要来源于JsonChao大佬的文章[Android系统启动流程之init进程启动](https://jsonchao.github.io/2019/02/18/Android%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%E4%B9%8Binit%E8%BF%9B%E7%A8%8B%E5%90%AF%E5%8A%A8/)
 
 Android系统启动流程共分为四部分：
 * init进程启动
@@ -173,8 +174,115 @@ sigchld_handler_init()函数内部会找到Zygote进程并移除所有的Zygote�
 ```
 start_property_service();
 ```
+**属性服务是如何启动的？**
+我们查看system/core/init/property_service.cpp源码中的`start_property_service()`函数：
+```c++
+void start_property_service() {
+    selinux_callback cb;
+    cb.func_audit = SelinuxAuditCallback;
+    selinux_set_callback(SELINUX_CB_AUDIT, cb);
+
+    property_set("ro.property_service.version", "2");
+
+    // 1
+    property_set_fd = CreateSocket(PROP_SERVICE_NAME, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
+                                   false, 0666, 0, 0,  nullptr);
+    if (property_set_fd == -1) {
+        PLOG(FATAL) << "start_property_service socket creation failed";
+    }
+
+    // 2
+    listen(property_set_fd, 8);
+
+    // 3、4、5
+    register_epoll_handler(property_set_fd, handle_property_set_fd);
+}
+```
+* 1、首先，创建非阻塞式的Socket，并返回`property_set_fd`文件描述符。
+### 文件描述符
+Linux 系统中，把一切都看做是文件，当进程打开现有文件或创建新文件时，内核向进程返回一个文件描述符，文件描述符就是内核为了高效管理已被打开的文件所创建的索引，用来指向被打开的文件，所有执行I/O操作的系统调用都会通过文件描述符。
+详细内容可以查看[文件描述符（File Descriptor）简介](https://segmentfault.com/a/1190000009724931)
+* 2、使用listen()函数去监听property_set_fd，此时Socket即成为属性服务端，并且它最多同时可为8个试图设置属性的用户提供服务。
+* 3、使用epoll()来监听property_set_fd：当property_set_fd中有数据到来时，init进程将调用handle_property_set_fd()函数进行处理。在Andorid 8.0的源码中则在handle_property_set_fd()函数中添加了handle_property_set函数做进一步封装处理。
+* 4、系统属性分为两种属性，即普通属性和控制属性。控制属性用来执行一些命令，比如开机的动画就使用了这种属性。在handle_property_set_fd()函数中会先判断如果属性名是以”ctl.”开头的，就说明是控制属性，如果客户端权限满足，则会调用handle_control_message()函数来修改控制属性。如果是普通属性，则会在客户端全面满足的条件下调用property_set函数来修改普通属性。
+* 5、在property_set中会先从属性存储空间中查找该属性，如果有，则更新，否则添加该属性。此外，如果名称是以”ro”开头（表示只读，不能修改），直接返回，如果名称是以”persist.”开头，则写入持久化属性。
+
+### epoll是什么？
+在Linux的新内核中，epoll是用来取代select/poll的，它是Linux内核为处理大批量文件描述符的改进版poll，是Linux下多路复用I/O接口select/poll的增强版，它能显著提升程序在大量并发连接中只有少量活跃的情况下的系统CPU利用率。
+### epoll和select的区别？
+epoll内部用于保存事件的数据类型是红黑树，查找速度快，select采用的数组保存信息，查找速度很慢，只有当等待少量文件描述符时，epoll和select的效率才差不多。
+**5、解析init.rc配置文件**
+```c++
+parser.ParseConfig("/init.rc");
+```
+### init.rc是什么？
+它是由Android初始化语言编写的一个非常重要的配置脚本文件。Android初始化语言主要包含5种类型的语句：
+* Action（常用）
+* Service（常用）
+* Command
+* Option
+* Import
+这里了解下Action和Service的格式：
+```c++
+on <trigger> [&& <trigger>]*     //设置触发器  
+    <command>  
+    <command>      //动作触发之后要执行的命令
+    ...
 
 
+service <name> <pathname> [ <argument> ]*   //<service的名字><执行程序路径><传递参数>  
+    <option>       //option是service的修饰词，影响什么时候、如何启动services  
+    <option>  
+    ...
+```
+注意：Android8.0对init.rc文件进行了拆分，每个服务对应一个rc文件。
 
+### init启动Zygote流程？
+先看到init.rc的这部分配置代码：
+```c++
+...
+on nonencrypted    
+    exec - root -- /system/bin/update_verifier nonencrypted  
+    // 1
+    class_start main         
+    class_start late_start
+...
+```
+1、使用class_start这个COMMAND去启动Zygote。其中class_start对应do_class_start()函数。
+```c++
+static Result<Success> do_class_start(const BuiltinArguments& args) {
+    // Starting a class does not start services which are explicitly disabled.
+    // They must be started individually.
+    for (const auto& service : ServiceList::GetInstance()) {
+        if (service->classnames().count(args[1])) {
+            // 2
+            if (auto result = service->StartIfNotDisabled(); !result) {
+                LOG(ERROR) << "Could not start service'" << service->name()
+                           << "' as part of class '" <<  args[1] << "': " <<  result.error();
+            }
+        }
+    }
+    return Success();
+}
+```
+2、在system/core/init/builtins.cpp的do_class_start()函数中会遍历前面的Vector类型的Service链表，找到classname为main的Zygote，并调用system/core/init/service.cpp中的startIfNotDisabled()函数。
+```c++
+bool Service::StartIfNotDisabled() {
+    if (!(flags_ & SVC_DISABLED)) {
+        return Start();
+    } else {
+        flags_ |= SVC_DISABLED_START;
+    }
+    return Success();
+}
+```
+3、如果Service没有再其对应的rc文件中设置disabled选项，则会调用Start()启动该Service。
+4、在Start()函数中，如果Service已经运行，则不再启动。如果没有，则使用fork()函数创建子进程，并返回pid值。当pid为0时，则说明当前代码逻辑在子进程中运行，最然后会调用execve()函数去启动子进程，并进入该Service的main函数中，如果该Service是Zygote，则会执行Zygote的main函数。（对应frameworks/base/cmds/app_process/app_main.cpp中的main()函数）
+5、最后，调用runtime的start函数启动Zygote。
 
-博客迭代信息请看[ReleaseNode](https://leopardpan.cn/2020/07/ReleaseNode/)
+### 五、总结
+经过以上的分析，init进程的启动过程主要分为以下三部：
+
+* 1、创建和挂载启动所需的文件目录。
+* 2、初始化和启动属性服务。
+* 3、解析init.rc配置文件并启动Zygote进程。
