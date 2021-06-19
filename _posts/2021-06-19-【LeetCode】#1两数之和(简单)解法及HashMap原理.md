@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 【LeetCode】#1两数之和(简单)-解法及HashMap原理
+title: 【LeetCode】#1两数之和(简单)解法及HashMap原理
 date: 2021-06-19
 tags: 算法与数据结构
 ---
