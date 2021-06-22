@@ -151,7 +151,7 @@ HashMap的原理讲解推荐视频（p6-p9）：[https://www.bilibili.com/video/
 
 **综上：**
 JDK 1.8以前，hashMap.containsKey(value)最好情况便是O(1)，最坏情况是O(n)
-JDK 1.8以后，hashMap.containsKey(value)最好情况便是O(1)，最坏情况是O(lgn)
+JDK 1.8以后，hashMap.containsKey(value)最好情况便是O(1)，最坏情况是O(logn)
 
 ### 4 HashMap源码分析
 [参考文章](https://blog.csdn.net/qingtian_1993/article/details/80763381)
