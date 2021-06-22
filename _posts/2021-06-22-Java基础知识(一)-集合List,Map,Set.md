@@ -13,13 +13,13 @@ Java集合类存放在java.util包中，是一个用来存放**对象**的容器
 　　　　3.集合可以存放不同类型，不限数量的数据类型。
 
 ## 二、Java集合框架
-![cmd-markdown-logo](https://img2018.cnblogs.com/blog/1175569/201908/1175569-20190813185822827-390071136.png)
+![集合框架](https://images2015.cnblogs.com/blog/1010726/201706/1010726-20170621004734695-988542448.png)
 
 上述所有的集合类，除了map系列的集合，即左边的集合都实现了Iterator接口。
 * Iterator是一个用来遍历集合中元素的接口，主要有hashNext()，next()，remove()三种方法。
 * 它的子接口ListIterator在它的基础上又添加了三种方法，分别是add()，previous()，hasPrevious()。
 
-###集合三种类型  
+### 集合三种类型  
 * `List`：一种有序列表的集合，例如，按索引排列的Student的List；
 * `Set`：一种保证没有重复元素的集合，例如，所有无重复名称的Student的Set；
 * `Map`：一种通过键值（key-value）查找的映射表集合，例如，根据Student的name查找对应Student的Map。
