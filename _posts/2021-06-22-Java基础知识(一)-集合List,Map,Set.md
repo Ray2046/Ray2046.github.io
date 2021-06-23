@@ -57,3 +57,44 @@ Java集合类存放在java.util包中，是一个用来存放**对象**的容器
 | 内存占用	        | 少          | 较大         |  
 
 通常情况下，我们总是优先使用`ArrayList`。
+
+要正确使用`List`的`contains()`、`indexOf()`这些方法, 放入的实例必须正确覆写equals()方法，否则，放进去的实例，查找不到。我们之所以能正常放入`String`、`Integer`这些对象，是因为Java标准库定义的这些类已经正确实现了`equals()`方法。
+
+### 要简化引用类型的比较，我们使用`Objects.equals()`静态方法：
+
+```Java
+public boolean equals(Object o) {
+    if (o instanceof Person) {
+        Person p = (Person) o;
+        return Objects.equals(this.name, p.name) && this.age == p.age;
+    }
+    return false;
+}
+```
+
+
+## 四、Map
+正确使用`Map`必须保证：  
+1.作为`key`的对象必须正确覆写`equals()`方法，相等的两个`key`实例调用`equals()`必须返回`true`；
+2.作为`key`的对象还必须正确覆写`hashCode()`方法，且`hashCode()`方法要严格遵循以下规范：  
+* 如果两个对象相等，则两个对象的`hashCode()`必须相等；
+* 如果两个对象不相等，则两个对象的`hashCode()`尽量不要相等。  
+上述第一条规范是正确性，必须保证实现，否则`HashMap`不能正常工作。
+而第二条如果尽量满足，则可以保证查询效率，因为不同的对象，如果返回相同的`hashCode()`，会造成Map内部存储冲突，使存取的效率下降。
+和实现`equals()`方法遇到的问题类似，为了避免`NullPointerException`,我们在计算hashCode()的时候，经常借助Objects.hash()来计算：  
+```Java
+int hashCode() {
+    return Objects.hash(firstName, lastName, age);
+}
+```
+所以，编写`equals()`和`hashCode()`遵循的原则是：  
+`equals()`用到的用于比较的每一个字段，都必须在`hashCode()`中用于计算；`equals()`中没有使用到的字段，绝不可放在`hashCode()`中计算。
+另外注意，对于放入`HashMap`的`value`对象，没有任何要求。
+
+既然`HashMap`内部使用了数组，通过计算`key`的`hashCode()`直接定位`value`所在的索引，那么第一个问题来了：`hashCode()`返回的`int`范围高达±21亿，先不考虑负数，`HashMap`内部使用的数组得有多大？  
+
+实际上`HashMap`初始化时默认的数组大小只有16，任何`key`，无论它的`hashCode()`有多大，都可以简单地通过：  
+```Java
+int index = key.hashCode() & 0xf; // 0xf = 15 （TODO:这个地方要看看hencoder）
+```
+虽然指定容量是`10000`，但`HashMap`内部的数组长度总是`2^n`，因此，实际数组长度被初始化为比`10000`大的`16384`（2^14）。
