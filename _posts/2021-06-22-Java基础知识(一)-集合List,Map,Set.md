@@ -48,6 +48,7 @@ Java集合类存放在java.util包中，是一个用来存放**对象**的容器
 * 5.对于新增和删除操作add和remove，LinedList比较占优势，因为ArrayList要移动数据
 
 表格对比`ArrayList`和`LinkedList`：   
+
 | 操作              | ArrayList   | LinkedList    |  
 | ----          | ----     | ----       |  
 | 获取指定元素       | 速度很快     | 需要从头开始查找元素 |  
