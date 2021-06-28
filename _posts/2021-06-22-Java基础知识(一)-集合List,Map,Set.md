@@ -60,7 +60,7 @@ Java集合类存放在java.util包中，是一个用来存放**对象**的容器
 
 要正确使用`List`的`contains()`、`indexOf()`这些方法, 放入的实例必须正确覆写equals()方法，否则，放进去的实例，查找不到。我们之所以能正常放入`String`、`Integer`这些对象，是因为Java标准库定义的这些类已经正确实现了`equals()`方法。
 
-### 要简化引用类型的比较，我们使用`Objects.equals()`静态方法：
+### 要简化引用类型的比较，我们使用 ** Objects.equals() ** 静态方法：
 
 ```Java
 public boolean equals(Object o) {
@@ -91,6 +91,7 @@ int hashCode() {
 `equals()`用到的用于比较的每一个字段，都必须在`hashCode()`中用于计算；`equals()`中没有使用到的字段，绝不可放在`hashCode()`中计算。
 另外注意，对于放入`HashMap`的`value`对象，没有任何要求。
 
+### HashMap的第一个问题
 既然`HashMap`内部使用了数组，通过计算`key`的`hashCode()`直接定位`value`所在的索引，那么第一个问题来了：`hashCode()`返回的`int`范围高达±21亿，先不考虑负数，`HashMap`内部使用的数组得有多大？  
 
 实际上`HashMap`初始化时默认的数组大小只有16，任何`key`，无论它的`hashCode()`有多大，都可以简单地通过：  
@@ -98,3 +99,18 @@ int hashCode() {
 int index = key.hashCode() & 0xf; // 0xf = 15 （TODO:这个地方要看看hencoder）
 ```
 虽然指定容量是`10000`，但`HashMap`内部的数组长度总是`2^n`，因此，实际数组长度被初始化为比`10000`大的`16384`（2^14）。
+
+### HashMap的第二个问题
+最后一个问题，key的`hash冲突`。
+在冲突的时候，一种最简单的解决办法是用`List`（`List<Entry<String, Person>>`）存储`hashCode()`相同的`key-value`。显然，如果冲突的概率越大，这个`List`就越长，`Map`的`get()`方法效率就越低，这就是为什么要尽量满足条件二。
+
+### 使用EnumMap
+`EnumMap`的`key`对象是`enum`类型。
+它在内部以一个非常紧凑的数组存储`value`，并且根据`enum`类型的`key`直接定位到内部数组的索引，并不需要计算`hashCode()`，不但效率最高，而且没有额外的空间浪费。
+
+### 使用TreeMap
+
+`HashMap`是一种以空间换时间的映射表，它的实现原理决定了内部的Key是无序的.  
+还有一种`Map`，它在内部会对Key进行排序，这种Map就是`SortedMap`。注意到`SortedMap`是**接口**，它的实现类是`TreeMap`。  
+`SortedMap`保证遍历时以Key的顺序来进行排序。例如，放入的Key是`"apple"`、`"pear"`、`"orange"`，遍历的顺序一定是`"apple"`、`"orange"`、`"pear"`，因为`String`默认按字母排序.  
+使用`TreeMap`时，放入的Key必须实现`Comparable`接口。`String`、`Integer`这些类已经实现了`Comparable`接口，因此可以直接作为Key使用。作为Value的对象则没有任何要求。
