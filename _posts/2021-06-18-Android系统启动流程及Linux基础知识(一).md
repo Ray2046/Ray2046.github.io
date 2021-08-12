@@ -2,7 +2,7 @@
 layout: post
 title: Android系统启动流程及Linux基础知识(一)
 date: 2021-06-18
-tags: Android   
+tags: 安卓   
 ---
 
 
