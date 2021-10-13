@@ -2,7 +2,7 @@
 layout: post
 title: AndroidStudio通过WiFi链接手机 & Mac系统制作点击执行脚本
 date: 2021-10-13
-tags: Android
+tags: 安卓
 ---
 
 ## Android Studio 4.1.2 通过wifi连接手机进行adb调试
